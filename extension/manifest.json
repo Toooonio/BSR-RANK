@@ -12,6 +12,9 @@
     "default_title": "Collect Amazon BSR Top 100",
     "default_popup": "popup.html"
   },
+  "background": {
+    "service_worker": "service-worker.js"
+  },
   "content_scripts": [
     {
       "matches": [
