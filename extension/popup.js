@@ -8,7 +8,13 @@ const setStatus = (message, isError = false) => {
 };
 
 async function messageTab(tabId, message) {
-  return chrome.tabs.sendMessage(tabId, message);
+  try {
+    return await chrome.tabs.sendMessage(tabId, message);
+  } catch (error) {
+    if (!/Receiving end does not exist/i.test(error instanceof Error ? error.message : '')) throw error;
+    await chrome.scripting.executeScript({ target: { tabId }, files: ['content.js'] });
+    return chrome.tabs.sendMessage(tabId, message);
+  }
 }
 
 function waitForTab(tabId) {

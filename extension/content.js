@@ -1,4 +1,6 @@
 (() => {
+  if (window.__amazonBsrCollectorLoaded) return;
+  window.__amazonBsrCollectorLoaded = true;
   const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
   const clean = (value) => (value || '').replace(/\s+/g, ' ').trim();
 

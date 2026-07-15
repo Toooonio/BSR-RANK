@@ -3,7 +3,7 @@
   "name": "Amazon BSR Top 100 Collector",
   "version": "1.0.0",
   "description": "Collect the complete Top 100 from an open Amazon Best Sellers page and send it to the analyzer.",
-  "permissions": ["activeTab", "tabs", "storage"],
+  "permissions": ["activeTab", "tabs", "storage", "scripting"],
   "host_permissions": [
     "https://*.amazon.com/*",
     "https://*.amazon.co.uk/*"

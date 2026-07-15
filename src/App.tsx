@@ -19,6 +19,16 @@ type ApiResponse = {
 type ProductSort = 'rank' | 'brand' | 'title';
 
 const COLORS = ['#0f8a8d', '#f4a261', '#d65a5a', '#5271c4', '#6ba368', '#a66bbe', '#ba7c43', '#438c9c', '#dc7998', '#6e8092'];
+const STORED_PRODUCTS_KEY = 'amazon-bsr-analyzer-products';
+
+function readStoredProducts(): ProductItem[] {
+  try {
+    const stored = localStorage.getItem(STORED_PRODUCTS_KEY);
+    return stored ? JSON.parse(stored) as ProductItem[] : [];
+  } catch {
+    return [];
+  }
+}
 
 async function decodeExtensionProducts(encoded: string): Promise<ProductItem[]> {
   const padded = encoded.replace(/-/g, '+').replace(/_/g, '/') + '='.repeat((4 - encoded.length % 4) % 4);
@@ -53,7 +63,7 @@ function EmptyState() {
 }
 
 export default function App() {
-  const [products, setProducts] = useState<ProductItem[]>([]);
+  const [products, setProducts] = useState<ProductItem[]>(readStoredProducts);
   const [url, setUrl] = useState('');
   const [html, setHtml] = useState('');
   const [showHtml, setShowHtml] = useState(false);
@@ -64,6 +74,7 @@ export default function App() {
   const [search, setSearch] = useState('');
   const [sort, setSort] = useState<ProductSort>('rank');
   const [ascending, setAscending] = useState(true);
+  const [extensionLoading, setExtensionLoading] = useState(false);
   const csvInput = useRef<HTMLInputElement>(null);
   const extensionImport = useRef('');
 
@@ -86,6 +97,7 @@ export default function App() {
     const sorted = next.filter((item) => item.rank >= 1 && item.rank <= 100).sort((a, b) => a.rank - b.rank).slice(0, 100);
     if (!sorted.length) { setError('未识别到有效商品。请检查排名、标题和 CSV 列名。'); return; }
     setProducts(sorted);
+    localStorage.setItem(STORED_PRODUCTS_KEY, JSON.stringify(sorted));
     setBrandFilter('all');
     setError('');
     setNotice(`已通过${source}载入 ${sorted.length} 个商品`);
@@ -95,12 +107,14 @@ export default function App() {
     const encoded = new URLSearchParams(window.location.hash.slice(1)).get('extension-data');
     if (!encoded || extensionImport.current === encoded) return;
     extensionImport.current = encoded;
+    setExtensionLoading(true);
     decodeExtensionProducts(encoded)
       .then((imported) => {
         acceptProducts(imported, 'Chrome 扩展');
         window.history.replaceState(null, '', `${window.location.pathname}${window.location.search}`);
       })
-      .catch((reason) => setError(reason instanceof Error ? reason.message : '无法读取 Chrome 扩展数据。'));
+      .catch((reason) => setError(reason instanceof Error ? reason.message : '无法读取 Chrome 扩展数据。'))
+      .finally(() => setExtensionLoading(false));
   }, []);
 
   const postAnalysis = async (endpoint: string, body: Record<string, string>, source: string) => {
@@ -159,7 +173,7 @@ export default function App() {
         {error && <p className="status error"><X size={16} />{error}</p>}{notice && <p className="status success">{notice}</p>}
       </section>
 
-      {products.length === 0 ? <EmptyState /> : <>
+      {products.length === 0 ? extensionLoading ? <div className="empty"><LoaderCircle className="spin" size={30} /><h2>正在导入 Chrome 扩展采集的数据</h2></div> : <EmptyState /> : <>
         <section className="overview"><Metric label="已解析商品数" value={products.length} detail="前 100 名范围内" tone="teal" /><Metric label="品牌数量" value={stats.length} detail="含 Unknown 品牌" tone="blue" /><Metric label="Top 10 品牌数" value={new Set(products.filter((item) => item.rank <= 10).map((item) => item.brand)).size} detail="排名 1 至 10" tone="orange" /><Metric label="Unknown 商品数" value={products.filter((item) => item.brand === 'Unknown').length} detail="可在明细表修改" tone="red" /></section>
 
         <section className="section-head"><div><span className="eyebrow">DISTRIBUTION</span><h2>品牌分布概览</h2></div><p>图表展示前 10 个品牌，饼图其余品牌归为 Others</p></section>
@@ -171,7 +185,7 @@ export default function App() {
           <div className="table-wrap"><table><thead><tr><th>品牌</th><th>1-10 数量</th><th>11-50 数量</th><th>51-100 数量</th><th>总数量</th><th>占比</th></tr></thead><tbody>{stats.map((row) => <tr key={row.brand}><td className="brand-name">{row.brand}</td><td>{row.top1To10}</td><td>{row.top11To50}</td><td>{row.top51To100}</td><td className="strong">{row.total}</td><td><span className="percent">{row.percentage}%</span></td></tr>)}</tbody></table></div>
         </section>
 
-        <section className="data-section detail-section"><div className="table-title"><div><span className="eyebrow">PRODUCTS</span><h2>商品明细</h2><p>{visibleProducts.length} / {products.length} 个商品</p></div><button className="button danger" onClick={() => { setProducts([]); setError(''); setNotice('数据已清空'); }}><RotateCcw size={16} />清空数据</button></div>
+        <section className="data-section detail-section"><div className="table-title"><div><span className="eyebrow">PRODUCTS</span><h2>商品明细</h2><p>{visibleProducts.length} / {products.length} 个商品</p></div><button className="button danger" onClick={() => { localStorage.removeItem(STORED_PRODUCTS_KEY); setProducts([]); setError(''); setNotice('数据已清空'); }}><RotateCcw size={16} />清空数据</button></div>
           <div className="filters"><div className="search"><Search size={17} /><input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="搜索商品标题" /></div><label className="select-wrap"><span>品牌</span><select value={brandFilter} onChange={(event) => setBrandFilter(event.target.value)}><option value="all">全部品牌</option>{brands.map((brand) => <option key={brand} value={brand}>{brand}</option>)}</select><ChevronDown size={14} /></label></div>
           <div className="table-wrap"><table className="details"><thead><tr><th><button onClick={() => toggleSort('rank')}>排名 {sort === 'rank' && (ascending ? '↑' : '↓')}</button></th><th><button onClick={() => toggleSort('brand')}>品牌 {sort === 'brand' && (ascending ? '↑' : '↓')}</button></th><th><button onClick={() => toggleSort('title')}>商品标题 {sort === 'title' && (ascending ? '↑' : '↓')}</button></th><th>ASIN</th><th>商品链接</th></tr></thead><tbody>{visibleProducts.map((item) => <tr key={item.rank}><td><span className="rank">#{item.rank}</span></td><td><input className="brand-input" value={item.brand} aria-label={`编辑第 ${item.rank} 名商品品牌`} onChange={(event) => updateBrand(item.rank, event.target.value)} /></td><td className="product-title">{item.title}</td><td className="asin">{item.asin || '—'}</td><td>{item.url ? <a className="product-link" href={item.url} target="_blank" rel="noreferrer">查看商品<ExternalLink size={14} /></a> : <span className="muted">—</span>}</td></tr>)}</tbody></table></div>
         </section>
