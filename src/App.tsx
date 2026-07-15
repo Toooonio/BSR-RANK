@@ -74,7 +74,13 @@ export default function App() {
     setLoading(true); setError(''); setNotice('');
     try {
       const response = await fetch(endpoint, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
-      const result = await response.json() as ApiResponse;
+      const raw = await response.text();
+      let result: ApiResponse;
+      try {
+        result = JSON.parse(raw) as ApiResponse;
+      } catch {
+        throw new Error('分析接口不可用或返回了网页错误页。请确认本地 API 已启动；部署到 Vercel 时需包含 /api 函数。');
+      }
       if (!response.ok || !result.products) throw new Error(result.message || '分析失败，请稍后重试。');
       acceptProducts(result.products, source);
       if (result.coverage?.missingRanks.length) {

@@ -52,3 +52,16 @@ Amazon 的页面结构、地区站点和反自动化机制会变化。URL 抓取
 - Excel：包含“品牌统计”、“商品明细”和“原始解析数据”三个工作表。
 - CSV：包含品牌统计和商品明细两个区段。
 - JSON：包含统计数据、商品明细与原始解析数据。
+
+## Vercel 部署
+
+项目包含 Vercel Serverless Functions：`/api/analyze-url` 与 `/api/parse-html`。推送到 GitHub 后，在 Vercel 导入仓库并使用以下构建设置：
+
+```text
+Framework Preset: Vite
+Build Command: npm run build
+Output Directory: dist
+Node.js: 20.x 或 22.x
+```
+
+Vercel 函数可处理 HTML 粘贴，并会尝试以 HTTP 请求读取链接榜单。由于 Vercel 使用数据中心 IP，Amazon 可能拦截自动请求；在这种情况下，页面会返回清晰错误提示，CSV 和 HTML 导入仍可完整使用。动态浏览器 Top 100 回退仅在本地 Express 运行时使用本机 Chrome，不能在 Vercel Serverless 环境保证运行。
