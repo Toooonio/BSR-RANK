@@ -65,3 +65,14 @@ Node.js: 20.x 或 22.x
 ```
 
 Vercel 函数可处理 HTML 粘贴，并会尝试以 HTTP 请求读取链接榜单。由于 Vercel 使用数据中心 IP，Amazon 可能拦截自动请求；在这种情况下，页面会返回清晰错误提示，CSV 和 HTML 导入仍可完整使用。动态浏览器 Top 100 回退仅在本地 Express 运行时使用本机 Chrome，不能在 Vercel Serverless 环境保证运行。
+
+## Chrome 扩展采集完整 Top 100
+
+不使用代理时，Vercel 不能稳定读取 Amazon 动态加载的完整榜单。项目内的 `extension/` 目录提供了本地 Chrome 扩展：它在用户正常打开的 Amazon 页面中滚动两页并收集真实的 1-100 名，再直接打开 Vercel 分析网站导入数据。
+
+1. 打开 Chrome 的 `chrome://extensions`，启用“开发者模式”。
+2. 点击“加载已解压的扩展程序”，选择项目中的 `extension` 文件夹。
+3. 打开任意 Amazon Best Sellers 榜单第一页，点击扩展图标。
+4. 在首次使用时填写你的 Vercel 网站地址，例如 `https://your-project.vercel.app`，然后点击采集按钮。
+
+扩展会打开第二页并验证排名连续为 1-100；成功后自动在分析网站中展示统计结果。它不需要 API Key、代理或第三方浏览器服务。

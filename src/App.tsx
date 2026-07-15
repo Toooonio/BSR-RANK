@@ -1,4 +1,4 @@
-import { ChangeEvent, useMemo, useRef, useState } from 'react';
+import { ChangeEvent, useEffect, useMemo, useRef, useState } from 'react';
 import Papa from 'papaparse';
 import {
   BarChart3, ChevronDown, ClipboardCopy, Download, ExternalLink, FileCode2,
@@ -19,6 +19,26 @@ type ApiResponse = {
 type ProductSort = 'rank' | 'brand' | 'title';
 
 const COLORS = ['#0f8a8d', '#f4a261', '#d65a5a', '#5271c4', '#6ba368', '#a66bbe', '#ba7c43', '#438c9c', '#dc7998', '#6e8092'];
+
+async function decodeExtensionProducts(encoded: string): Promise<ProductItem[]> {
+  const padded = encoded.replace(/-/g, '+').replace(/_/g, '/') + '='.repeat((4 - encoded.length % 4) % 4);
+  const binary = atob(padded);
+  const compressed = Uint8Array.from(binary, (character) => character.charCodeAt(0));
+  const stream = new Blob([compressed]).stream().pipeThrough(new DecompressionStream('gzip'));
+  const parsed = JSON.parse(await new Response(stream).text()) as unknown;
+  if (!Array.isArray(parsed)) throw new Error('扩展数据格式无效。');
+  return parsed.map((item) => {
+    const product = item as Partial<ProductItem>;
+    return {
+      rank: Number(product.rank),
+      title: String(product.title ?? ''),
+      brand: String(product.brand ?? 'Unknown'),
+      asin: product.asin,
+      url: product.url,
+      image: product.image,
+    };
+  });
+}
 
 function Metric({ label, value, detail, tone }: { label: string; value: number; detail: string; tone: string }) {
   return <div className="metric"><div className={`metric-mark ${tone}`} /><div><p>{label}</p><strong>{value}</strong><span>{detail}</span></div></div>;
@@ -45,6 +65,7 @@ export default function App() {
   const [sort, setSort] = useState<ProductSort>('rank');
   const [ascending, setAscending] = useState(true);
   const csvInput = useRef<HTMLInputElement>(null);
+  const extensionImport = useRef('');
 
   const stats = useMemo(() => calculateBrandStats(products), [products]);
   const brands = useMemo(() => stats.map((row) => row.brand), [stats]);
@@ -69,6 +90,18 @@ export default function App() {
     setError('');
     setNotice(`已通过${source}载入 ${sorted.length} 个商品`);
   };
+
+  useEffect(() => {
+    const encoded = new URLSearchParams(window.location.hash.slice(1)).get('extension-data');
+    if (!encoded || extensionImport.current === encoded) return;
+    extensionImport.current = encoded;
+    decodeExtensionProducts(encoded)
+      .then((imported) => {
+        acceptProducts(imported, 'Chrome 扩展');
+        window.history.replaceState(null, '', `${window.location.pathname}${window.location.search}`);
+      })
+      .catch((reason) => setError(reason instanceof Error ? reason.message : '无法读取 Chrome 扩展数据。'));
+  }, []);
 
   const postAnalysis = async (endpoint: string, body: Record<string, string>, source: string) => {
     setLoading(true); setError(''); setNotice('');
