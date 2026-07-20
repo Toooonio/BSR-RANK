@@ -1,6 +1,6 @@
 # Amazon BSR Brand Analyzer
 
-一个用于统计 Amazon Best Sellers（BSR）榜单中品牌数量分布的本地网站工具。它会将排名 1-100 的商品按 `1-10`、`11-50`、`51-100` 三个互不重叠的区间统计，并提供图表、编辑、筛选和导出功能。
+一个用于统计 Amazon Best Sellers（BSR）榜单中品牌数量分布的本地网站工具。它会将排名 1-100 的商品按 `1-10`、`11-30`、`31-100` 三个互不重叠的区间统计，并提供图表、编辑、筛选和导出功能。
 
 ## 环境要求
 
@@ -43,7 +43,7 @@ rank,brand,title,asin,url
 服务端在 `server/bsrParser.ts` 中提供：
 
 - `parseBSRHtml(html)`：识别 Amazon 常见榜单卡片、排名、标题、商品链接、ASIN、图片与可用品牌字段。
-- `calculateBrandStats(products)`：按照 `1-10`、`11-50`、`51-100` 计算品牌统计，并按总数、Top 10 数、Top 50 数排序。
+- `calculateBrandStats(products)`：按照 `1-10`、`11-30`、`31-100` 计算品牌统计，并按总数、Top 10 数、Top 30 数排序。
 
 Amazon 的页面结构、地区站点和反自动化机制会变化。URL 抓取只是一个便利入口；HTML 与 CSV 导入是稳定的备用路径。
 

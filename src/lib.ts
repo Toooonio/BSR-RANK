@@ -4,8 +4,16 @@ import type { BrandStats, ProductItem } from './types';
 const clean = (value: unknown) => String(value ?? '').replace(/\s+/g, ' ').trim();
 
 export function inferBrand(title: string): string {
-  const first = clean(title).split(' ')[0]?.replace(/[^\p{L}\p{N}&'-]/gu, '');
-  return first && !['the', 'new', 'for', 'with', 'amazon'].includes(first.toLowerCase()) ? first : 'Unknown';
+  const words = clean(title).split(' ').filter(Boolean);
+  const ignored = new Set(['the', 'new', 'for', 'with', 'amazon', 'product', 'products', 'shoes', 'shoe', 'sandals', 'maker', 'makers', 'ice', 'portable', 'countertop', 'mens', "men's", 'womens', "women's", 'girls', 'boys', 'kids', 'toddler', 'dress', 'walking', 'outdoor', 'adult', 'unisex']);
+  const brandTailWords = new Set(['pairs', 'warehouse', 'marc', 'swift', 'john', 'paul', 'jones', 'smith', 'lee', 'west', 'coast', 'stone', 'eagle', 'house', 'line', 'life', 'tech']);
+  const first = words[0]?.replace(/[^\p{L}\p{N}&'-]/gu, '');
+  const second = words[1]?.replace(/[^\p{L}\p{N}&'-]/gu, '');
+  if (!first || ignored.has(first.toLowerCase())) return 'Unknown';
+  const allCapsOrNumeric = !!second && /^[A-Z0-9&-]{1,}$/.test(first) && /^[A-Z0-9&-]{1,}$/.test(second);
+  const titleCaseBrand = !!second && /^[A-Z][\p{L}\p{N}&'-]*$/u.test(first) && brandTailWords.has(second.toLowerCase());
+  if (second && !ignored.has(second.toLowerCase()) && (allCapsOrNumeric || titleCaseBrand || /^\d+$/.test(second))) return `${first} ${second}`;
+  return first;
 }
 
 export function calculateBrandStats(products: ProductItem[]): BrandStats[] {
@@ -13,16 +21,16 @@ export function calculateBrandStats(products: ProductItem[]): BrandStats[] {
   const map = new Map<string, BrandStats>();
   valid.forEach((product) => {
     const brand = clean(product.brand) || 'Unknown';
-    const record = map.get(brand) ?? { brand, top1To10: 0, top11To50: 0, top51To100: 0, total: 0, percentage: 0 };
+    const record = map.get(brand) ?? { brand, top1To10: 0, top11To30: 0, top31To100: 0, total: 0, percentage: 0 };
     if (product.rank <= 10) record.top1To10 += 1;
-    else if (product.rank <= 50) record.top11To50 += 1;
-    else record.top51To100 += 1;
+    else if (product.rank <= 30) record.top11To30 += 1;
+    else record.top31To100 += 1;
     record.total += 1;
     map.set(brand, record);
   });
   return [...map.values()]
     .map((record) => ({ ...record, percentage: valid.length ? Number((record.total / valid.length * 100).toFixed(1)) : 0 }))
-    .sort((a, b) => b.total - a.total || b.top1To10 - a.top1To10 || b.top11To50 - a.top11To50 || a.brand.localeCompare(b.brand));
+    .sort((a, b) => b.total - a.total || b.top1To10 - a.top1To10 || b.top11To30 - a.top11To30 || a.brand.localeCompare(b.brand));
 }
 
 export function parseCsvRows(rows: Record<string, unknown>[]): ProductItem[] {
@@ -56,7 +64,7 @@ function download(blob: Blob, name: string) {
 
 export function exportData(format: 'csv' | 'json' | 'xlsx', products: ProductItem[], stats: BrandStats[]) {
   const stamp = new Date().toISOString().slice(0, 10);
-  const statsRows = stats.map((row) => ({ '品牌': row.brand, '1-10数量': row.top1To10, '11-50数量': row.top11To50, '51-100数量': row.top51To100, '总数量': row.total, '占比': `${row.percentage}%` }));
+  const statsRows = stats.map((row) => ({ '品牌': row.brand, '1-10数量': row.top1To10, '11-30数量': row.top11To30, '31-100数量': row.top31To100, '总数量': row.total, '占比': `${row.percentage}%` }));
   const productRows = products.map((row) => ({ '排名': row.rank, '品牌': row.brand, '商品标题': row.title, 'ASIN': row.asin ?? '', '商品链接': row.url ?? '', '图片链接': row.image ?? '' }));
   if (format === 'json') {
     download(new Blob([JSON.stringify({ exportedAt: new Date().toISOString(), brandStats: stats, products, rawParsedData: products }, null, 2)], { type: 'application/json' }), `bsr-brand-analysis-${stamp}.json`);

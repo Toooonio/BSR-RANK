@@ -90,7 +90,7 @@ export default function App() {
     if (stats.length <= 10) return stats;
     const head = stats.slice(0, 10);
     const rest = stats.slice(10).reduce((sum, item) => sum + item.total, 0);
-    return [...head, { brand: 'Others', total: rest, top1To10: 0, top11To50: 0, top51To100: 0, percentage: Number((rest / products.length * 100).toFixed(1)) }];
+    return [...head, { brand: 'Others', total: rest, top1To10: 0, top11To30: 0, top31To100: 0, percentage: Number((rest / products.length * 100).toFixed(1)) }];
   }, [stats, products.length]);
 
   const acceptProducts = (next: ProductItem[], source: string) => {
@@ -153,7 +153,7 @@ export default function App() {
   const updateBrand = (rank: number, brand: string) => setProducts((items) => items.map((item) => item.rank === rank ? { ...item, brand: brand.trim() || 'Unknown' } : item));
   const toggleSort = (column: ProductSort) => { if (sort === column) setAscending((value) => !value); else { setSort(column); setAscending(column === 'rank'); } };
   const copyStats = async () => {
-    const text = [['品牌', '1-10', '11-50', '51-100', '总数量', '占比'], ...stats.map((row) => [row.brand, row.top1To10, row.top11To50, row.top51To100, row.total, `${row.percentage}%`])].map((row) => row.join('\t')).join('\n');
+    const text = [['品牌', '1-10', '11-30', '31-100', '总数量', '占比'], ...stats.map((row) => [row.brand, row.top1To10, row.top11To30, row.top31To100, row.total, `${row.percentage}%`])].map((row) => row.join('\t')).join('\n');
     await navigator.clipboard.writeText(text); setNotice('品牌统计表已复制到剪贴板');
   };
 
@@ -178,11 +178,11 @@ export default function App() {
 
         <section className="section-head"><div><span className="eyebrow">DISTRIBUTION</span><h2>品牌分布概览</h2></div><p>图表展示前 10 个品牌，饼图其余品牌归为 Others</p></section>
         <section className="charts"><ChartPanel title="品牌总数量"><ResponsiveContainer width="100%" height={280}><BarChart data={chartStats} margin={{ top: 8, right: 8, left: -22, bottom: 0 }}><XAxis dataKey="brand" tick={{ fontSize: 12, fill: '#61717c' }} interval={0} /><YAxis allowDecimals={false} tick={{ fontSize: 12, fill: '#61717c' }} /><Tooltip cursor={{ fill: '#eef3f3' }} /><Bar dataKey="total" name="商品数量" fill="#0f8a8d" radius={[3, 3, 0, 0]} /></BarChart></ResponsiveContainer></ChartPanel>
-          <ChartPanel title="排名区间分布"><ResponsiveContainer width="100%" height={280}><BarChart data={chartStats} margin={{ top: 8, right: 8, left: -22, bottom: 0 }}><XAxis dataKey="brand" tick={{ fontSize: 12, fill: '#61717c' }} interval={0} /><YAxis allowDecimals={false} tick={{ fontSize: 12, fill: '#61717c' }} /><Tooltip cursor={{ fill: '#eef3f3' }} /><Legend iconType="circle" iconSize={8} /><Bar dataKey="top1To10" name="1-10" stackId="ranks" fill="#d65a5a" /><Bar dataKey="top11To50" name="11-50" stackId="ranks" fill="#f4a261" /><Bar dataKey="top51To100" name="51-100" stackId="ranks" fill="#5271c4" radius={[3, 3, 0, 0]} /></BarChart></ResponsiveContainer></ChartPanel>
+          <ChartPanel title="排名区间分布"><ResponsiveContainer width="100%" height={280}><BarChart data={chartStats} margin={{ top: 8, right: 8, left: -22, bottom: 0 }}><XAxis dataKey="brand" tick={{ fontSize: 12, fill: '#61717c' }} interval={0} /><YAxis allowDecimals={false} tick={{ fontSize: 12, fill: '#61717c' }} /><Tooltip cursor={{ fill: '#eef3f3' }} /><Legend iconType="circle" iconSize={8} /><Bar dataKey="top1To10" name="1-10" stackId="ranks" fill="#d65a5a" /><Bar dataKey="top11To30" name="11-30" stackId="ranks" fill="#f4a261" /><Bar dataKey="top31To100" name="31-100" stackId="ranks" fill="#5271c4" radius={[3, 3, 0, 0]} /></BarChart></ResponsiveContainer></ChartPanel>
           <ChartPanel title="品牌占比"><ResponsiveContainer width="100%" height={280}><PieChart><Pie data={pieStats} dataKey="total" nameKey="brand" cx="50%" cy="48%" innerRadius={55} outerRadius={93} paddingAngle={2}>{pieStats.map((item, index) => <Cell key={item.brand} fill={COLORS[index % COLORS.length]} />)}</Pie><Tooltip formatter={(value: number, _name, info) => [`${value} 个 (${(info.payload as BrandStats).percentage}%)`, '商品数量']} /><Legend layout="vertical" verticalAlign="middle" align="right" iconType="circle" iconSize={8} /></PieChart></ResponsiveContainer></ChartPanel></section>
 
         <section className="data-section"><div className="table-title"><div><span className="eyebrow">BRAND SUMMARY</span><h2>品牌统计表</h2></div><div className="table-actions"><button className="icon-button" title="复制统计结果" onClick={copyStats}><ClipboardCopy size={17} /></button><button className="button compact" onClick={() => exportData('xlsx', products, stats)}><FileSpreadsheet size={16} />导出 Excel</button><button className="button compact" onClick={() => exportData('csv', products, stats)}><Download size={16} />导出 CSV</button><button className="button compact" onClick={() => exportData('json', products, stats)}><Download size={16} />导出 JSON</button></div></div>
-          <div className="table-wrap"><table><thead><tr><th>品牌</th><th>1-10 数量</th><th>11-50 数量</th><th>51-100 数量</th><th>总数量</th><th>占比</th></tr></thead><tbody>{stats.map((row) => <tr key={row.brand}><td className="brand-name">{row.brand}</td><td>{row.top1To10}</td><td>{row.top11To50}</td><td>{row.top51To100}</td><td className="strong">{row.total}</td><td><span className="percent">{row.percentage}%</span></td></tr>)}</tbody></table></div>
+          <div className="table-wrap"><table><thead><tr><th>品牌</th><th>1-10 数量</th><th>11-30 数量</th><th>31-100 数量</th><th>总数量</th><th>占比</th></tr></thead><tbody>{stats.map((row) => <tr key={row.brand}><td className="brand-name">{row.brand}</td><td>{row.top1To10}</td><td>{row.top11To30}</td><td>{row.top31To100}</td><td className="strong">{row.total}</td><td><span className="percent">{row.percentage}%</span></td></tr>)}</tbody></table></div>
         </section>
 
         <section className="data-section detail-section"><div className="table-title"><div><span className="eyebrow">PRODUCTS</span><h2>商品明细</h2><p>{visibleProducts.length} / {products.length} 个商品</p></div><button className="button danger" onClick={() => { localStorage.removeItem(STORED_PRODUCTS_KEY); setProducts([]); setError(''); setNotice('数据已清空'); }}><RotateCcw size={16} />清空数据</button></div>

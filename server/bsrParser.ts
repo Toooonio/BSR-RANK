@@ -18,11 +18,18 @@ function absoluteUrl(value?: string, origin = 'https://www.amazon.com'): string 
 export function inferBrand(title: string): string {
   const text = clean(title);
   if (!text) return 'Unknown';
-  const ignored = new Set(['the', 'new', 'for', 'with', 'best', 'amazon', 'pack', 'set']);
+  const ignored = new Set(['the', 'new', 'for', 'with', 'best', 'amazon', 'pack', 'set', 'product', 'products', 'shoes', 'shoe', 'sandals', 'maker', 'makers', 'ice', 'portable', 'countertop', 'mens', "men's", 'womens', "women's", 'girls', 'boys', 'kids', 'toddler', 'dress', 'walking', 'outdoor', 'adult', 'unisex']);
+  const brandTailWords = new Set(['pairs', 'warehouse', 'marc', 'swift', 'john', 'paul', 'jones', 'smith', 'lee', 'west', 'coast', 'stone', 'eagle', 'house', 'line', 'life', 'tech']);
   const words = text.split(' ').filter(Boolean);
   if (!words.length || ignored.has(words[0].toLowerCase())) return 'Unknown';
-  if (words.length > 1 && /^[A-Z0-9&-]{2,}$/.test(words[0]) && /^[A-Z0-9&-]{2,}$/.test(words[1])) {
-    return `${words[0]} ${words[1]}`;
+  if (words.length > 1) {
+    const first = words[0].replace(/[^\p{L}\p{N}&'-]/gu, '');
+    const second = words[1].replace(/[^\p{L}\p{N}&'-]/gu, '');
+    const allCapsOrNumeric = /^[A-Z0-9&-]{1,}$/.test(first) && /^[A-Z0-9&-]{1,}$/.test(second);
+    const titleCaseBrand = /^[A-Z][\p{L}\p{N}&'-]*$/u.test(first) && brandTailWords.has(second.toLowerCase());
+    if (second && !ignored.has(second.toLowerCase()) && (allCapsOrNumeric || titleCaseBrand || /^\d+$/.test(second))) {
+      return `${first} ${second}`;
+    }
   }
   return words[0].replace(/[^\p{L}\p{N}&'-]/gu, '') || 'Unknown';
 }
@@ -99,14 +106,14 @@ export function calculateBrandStats(products: ProductItem[]): BrandStats[] {
   const counts = new Map<string, Omit<BrandStats, 'percentage'>>();
   valid.forEach((product) => {
     const brand = clean(product.brand) || 'Unknown';
-    const entry = counts.get(brand) ?? { brand, top1To10: 0, top11To50: 0, top51To100: 0, total: 0 };
+    const entry = counts.get(brand) ?? { brand, top1To10: 0, top11To30: 0, top31To100: 0, total: 0 };
     if (product.rank <= 10) entry.top1To10 += 1;
-    else if (product.rank <= 50) entry.top11To50 += 1;
-    else entry.top51To100 += 1;
+    else if (product.rank <= 30) entry.top11To30 += 1;
+    else entry.top31To100 += 1;
     entry.total += 1;
     counts.set(brand, entry);
   });
   return Array.from(counts.values())
     .map((entry) => ({ ...entry, percentage: valid.length ? Number(((entry.total / valid.length) * 100).toFixed(1)) : 0 }))
-    .sort((a, b) => b.total - a.total || b.top1To10 - a.top1To10 || b.top11To50 - a.top11To50 || a.brand.localeCompare(b.brand));
+    .sort((a, b) => b.total - a.total || b.top1To10 - a.top1To10 || b.top11To30 - a.top11To30 || a.brand.localeCompare(b.brand));
 }

@@ -5,8 +5,15 @@
   const clean = (value) => (value || '').replace(/\s+/g, ' ').trim();
 
   function inferBrand(title) {
-    const first = clean(title).split(' ')[0]?.replace(/[^\p{L}\p{N}&'-]/gu, '');
-    return first && !['the', 'new', 'for', 'with', 'amazon'].includes(first.toLowerCase()) ? first : 'Unknown';
+    const words = clean(title).split(' ').filter(Boolean);
+    const ignored = new Set(['the', 'new', 'for', 'with', 'amazon', 'product', 'products', 'shoes', 'shoe', 'sandals', 'maker', 'makers', 'ice', 'portable', 'countertop', 'mens', "men's", 'womens', "women's", 'girls', 'boys', 'kids', 'toddler', 'dress', 'walking', 'outdoor', 'adult', 'unisex']);
+    const brandTailWords = new Set(['pairs', 'warehouse', 'marc', 'swift', 'john', 'paul', 'jones', 'smith', 'lee', 'west', 'coast', 'stone', 'eagle', 'house', 'line', 'life', 'tech']);
+    const first = words[0]?.replace(/[^\p{L}\p{N}&'-]/gu, '');
+    const second = words[1]?.replace(/[^\p{L}\p{N}&'-]/gu, '');
+    if (!first || ignored.has(first.toLowerCase())) return 'Unknown';
+    const allCapsOrNumeric = !!second && /^[A-Z0-9&-]{1,}$/.test(first) && /^[A-Z0-9&-]{1,}$/.test(second);
+    const titleCaseBrand = !!second && /^[A-Z][\p{L}\p{N}&'-]*$/u.test(first) && brandTailWords.has(second.toLowerCase());
+    return second && !ignored.has(second.toLowerCase()) && (allCapsOrNumeric || titleCaseBrand || /^\d+$/.test(second)) ? `${first} ${second}` : first;
   }
 
   function collectProducts() {
