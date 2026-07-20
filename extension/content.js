@@ -52,10 +52,14 @@
     return url.toString();
   }
 
+  function currentPageNumber() {
+    return Number(new URL(location.href).searchParams.get('pg') || '1');
+  }
+
   chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
     if (message?.type !== 'COLLECT_BSR_PAGE') return undefined;
     scrollForProducts()
-      .then((products) => sendResponse({ products, secondPageUrl: secondPageUrl() }))
+      .then((products) => sendResponse({ products, secondPageUrl: secondPageUrl(), currentPage: currentPageNumber(), currentUrl: location.href }))
       .catch((error) => sendResponse({ error: error instanceof Error ? error.message : 'Unable to collect this page.' }));
     return true;
   });

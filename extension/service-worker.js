@@ -45,8 +45,17 @@ async function collectTop100(analyzerUrl) {
   const [firstTab] = await chrome.tabs.query({ active: true, currentWindow: true });
   if (!firstTab?.id || !/amazon\./i.test(firstTab.url || '')) throw new Error('Open an Amazon Best Sellers page before collecting.');
   await setStatus('Collecting the first 50 products...');
-  const first = await collectFromTab(firstTab.id);
+  let first = await collectFromTab(firstTab.id);
   if (first.error || !first.products?.length) throw new Error(first.error || 'No ranked products found on the first page.');
+
+  if (first.currentPage === 2) {
+    const firstPageUrl = new URL(firstTab.url);
+    firstPageUrl.searchParams.set('pg', '1');
+    await chrome.tabs.update(firstTab.id, { url: firstPageUrl.toString(), active: true });
+    await waitForTab(firstTab.id);
+    first = await collectFromTab(firstTab.id);
+    if (first.error || !first.products?.length) throw new Error(first.error || 'No ranked products found on the first page.');
+  }
 
   await setStatus('Opening and collecting the second 50 products...');
   const secondTab = await chrome.tabs.create({ url: first.secondPageUrl, active: true });
