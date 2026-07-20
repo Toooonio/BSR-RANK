@@ -21,10 +21,12 @@ export function calculateBrandStats(products: ProductItem[]): BrandStats[] {
   const map = new Map<string, BrandStats>();
   valid.forEach((product) => {
     const brand = clean(product.brand) || 'Unknown';
-    const record = map.get(brand) ?? { brand, top1To10: 0, top11To30: 0, top31To100: 0, total: 0, percentage: 0 };
+    const record = map.get(brand) ?? { brand, top1To10: 0, top11To30: 0, top31To50: 0, top51To100: 0, top31To100: 0, total: 0, percentage: 0 };
     if (product.rank <= 10) record.top1To10 += 1;
     else if (product.rank <= 30) record.top11To30 += 1;
-    else record.top31To100 += 1;
+    else if (product.rank <= 50) record.top31To50 += 1;
+    else record.top51To100 += 1;
+    record.top31To100 = record.top31To50 + record.top51To100;
     record.total += 1;
     map.set(brand, record);
   });
@@ -64,7 +66,7 @@ function download(blob: Blob, name: string) {
 
 export function exportData(format: 'csv' | 'json' | 'xlsx', products: ProductItem[], stats: BrandStats[]) {
   const stamp = new Date().toISOString().slice(0, 10);
-  const statsRows = stats.map((row) => ({ '品牌': row.brand, '1-10数量': row.top1To10, '11-30数量': row.top11To30, '31-100数量': row.top31To100, '总数量': row.total, '占比': `${row.percentage}%` }));
+  const statsRows = stats.map((row) => ({ '品牌': row.brand, '1-10数量': row.top1To10, '11-30数量': row.top11To30, '31-50数量': row.top31To50, '51-100数量': row.top51To100, '31-100数量': row.top31To100, '总数量': row.total, '占比': `${row.percentage}%` }));
   const productRows = products.map((row) => ({ '排名': row.rank, '品牌': row.brand, '商品标题': row.title, 'ASIN': row.asin ?? '', '商品链接': row.url ?? '', '图片链接': row.image ?? '' }));
   if (format === 'json') {
     download(new Blob([JSON.stringify({ exportedAt: new Date().toISOString(), brandStats: stats, products, rawParsedData: products }, null, 2)], { type: 'application/json' }), `bsr-brand-analysis-${stamp}.json`);

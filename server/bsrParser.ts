@@ -106,10 +106,12 @@ export function calculateBrandStats(products: ProductItem[]): BrandStats[] {
   const counts = new Map<string, Omit<BrandStats, 'percentage'>>();
   valid.forEach((product) => {
     const brand = clean(product.brand) || 'Unknown';
-    const entry = counts.get(brand) ?? { brand, top1To10: 0, top11To30: 0, top31To100: 0, total: 0 };
+    const entry = counts.get(brand) ?? { brand, top1To10: 0, top11To30: 0, top31To50: 0, top51To100: 0, top31To100: 0, total: 0 };
     if (product.rank <= 10) entry.top1To10 += 1;
     else if (product.rank <= 30) entry.top11To30 += 1;
-    else entry.top31To100 += 1;
+    else if (product.rank <= 50) entry.top31To50 += 1;
+    else entry.top51To100 += 1;
+    entry.top31To100 = entry.top31To50 + entry.top51To100;
     entry.total += 1;
     counts.set(brand, entry);
   });
