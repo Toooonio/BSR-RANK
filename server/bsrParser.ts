@@ -106,8 +106,9 @@ export function calculateBrandStats(products: ProductItem[]): BrandStats[] {
   const counts = new Map<string, Omit<BrandStats, 'percentage'>>();
   valid.forEach((product) => {
     const brand = clean(product.brand) || 'Unknown';
-    const entry = counts.get(brand) ?? { brand, top1To10: 0, top11To30: 0, top31To50: 0, top51To100: 0, top31To100: 0, total: 0 };
-    if (product.rank <= 10) entry.top1To10 += 1;
+    const entry = counts.get(brand) ?? { brand, topRank1: 0, top2To10: 0, top11To30: 0, top31To50: 0, top51To100: 0, top31To100: 0, total: 0 };
+    if (product.rank === 1) entry.topRank1 += 1;
+    else if (product.rank <= 10) entry.top2To10 += 1;
     else if (product.rank <= 30) entry.top11To30 += 1;
     else if (product.rank <= 50) entry.top31To50 += 1;
     else entry.top51To100 += 1;
@@ -117,5 +118,5 @@ export function calculateBrandStats(products: ProductItem[]): BrandStats[] {
   });
   return Array.from(counts.values())
     .map((entry) => ({ ...entry, percentage: valid.length ? Number(((entry.total / valid.length) * 100).toFixed(1)) : 0 }))
-    .sort((a, b) => b.total - a.total || b.top1To10 - a.top1To10 || b.top11To30 - a.top11To30 || a.brand.localeCompare(b.brand));
+    .sort((a, b) => b.total - a.total || b.topRank1 - a.topRank1 || b.top2To10 - a.top2To10 || b.top11To30 - a.top11To30 || a.brand.localeCompare(b.brand));
 }
